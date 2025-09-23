@@ -1,0 +1,22 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#000000"/>
+  <g fill="#ffffff">
+    <!-- Sound wave design -->
+    <rect x="200" y="300" width="40" height="424" rx="20"/>
+    <rect x="280" y="200" width="40" height="624" rx="20"/>
+    <rect x="360" y="150" width="40" height="724" rx="20"/>
+    <rect x="440" y="100" width="40" height="824" rx="20"/>
+    <rect x="520" y="150" width="40" height="724" rx="20"/>
+    <rect x="600" y="200" width="40" height="624" rx="20"/>
+    <rect x="680" y="300" width="40" height="424" rx="20"/>
+    <rect x="760" y="400" width="40" height="224" rx="20"/>
+  </g>
+  <!-- Microphone icon in center -->
+  <g fill="#ffffff">
+    <circle cx="512" cy="512" r="120" fill="#000000" stroke="#ffffff" stroke-width="8"/>
+    <path d="M512 432C482 432 458 456 458 486V538C458 568 482 592 512 592C542 592 566 568 566 538V486C566 456 542 432 512 432Z" fill="#ffffff"/>
+    <path d="M512 632C462 632 422 592 422 542V522C422 512 430 504 440 504C450 504 458 512 458 522V542C458 572 482 596 512 596C542 596 566 572 566 542V522C566 512 574 504 584 504C594 504 602 512 602 522V542C602 592 562 632 512 632Z" fill="#ffffff"/>
+    <rect x="492" y="632" width="40" height="60" rx="20" fill="#ffffff"/>
+    <rect x="452" y="692" width="120" height="20" rx="10" fill="#ffffff"/>
+  </g>
+</svg>
