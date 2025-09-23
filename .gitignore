@@ -1,0 +1,40 @@
+# Android / Gradle
+*.iml
+.gradle/
+build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+app/build/
+android-app/.gradle/
+android-app/build/
+android-app/local.properties
+android-app/**/build/
+
+# IDEs / macOS
+.idea/
+.DS_Store
+*.log
+
+# Web/Node
+node_modules/
+dist/
+
+# Claves y secretos
+*.keystore
+*.jks
+*.pem
+*.p12
+*.properties
+keystore.properties
+.env
+EOcd "/Volumes/SSD 1/PROYECTOS/APPS"
+pwd
+git init
+git add .
+git commit -m "Initial commit"
+brew install gh
+gh auth login
