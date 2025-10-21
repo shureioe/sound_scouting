@@ -351,12 +351,24 @@ export default function ReportPage() {
             ${report.sets.length === 0 ? 
                 '<p>No hay localizaciones evaluadas en este proyecto.</p>' :
                 report.sets.map(set => {
-                  const status = getEvaluationStatus(set.evaluation);
+                  const status = getEvaluationStatus(set.status ?? set.evaluation);
+                  const coords = set.coords
+                    ? { lat: set.coords.lat, lng: set.coords.lng, accuracy: undefined }
+                    : set.coordinates
+                      ? {
+                          lat: set.coordinates.latitude,
+                          lng: set.coordinates.longitude,
+                          accuracy: set.coordinates.accuracy,
+                        }
+                      : null;
+                  const photoUrls = (set.photos && set.photos.length > 0)
+                    ? set.photos
+                    : (set.legacyPhotos?.map(photo => photo.url) ?? []);
                   return `
                     <div class="set-card">
                         <div class="set-header">
                             <div>
-                                <div class="set-title">${set.title}</div>
+                                <div class="set-title">${set.name}</div>
                                 <div class="set-date">Evaluado el ${formatDate(set.createdAt)}</div>
                             </div>
                             <div class="evaluation-badge" style="background-color: ${status.color}">
@@ -370,24 +382,24 @@ export default function ReportPage() {
                             </div>
                         ` : ''}
 
-                        ${set.coordinates ? `
+                        ${coords ? `
                             <div class="coordinates">
-                                <strong>Coordenadas:</strong> ${set.coordinates.latitude.toFixed(6)}, ${set.coordinates.longitude.toFixed(6)}
-                                ${set.coordinates.accuracy ? `<br><small>Precisión: ±${set.coordinates.accuracy.toFixed(0)}m</small>` : ''}
+                                <strong>Coordenadas:</strong> ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}
+                                ${coords.accuracy ? `<br><small>Precisión: ±${coords.accuracy.toFixed(0)}m</small>` : ''}
                             </div>
-                            <a href="https://www.google.com/maps?q=${set.coordinates.latitude},${set.coordinates.longitude}" 
+                            <a href="https://www.google.com/maps?q=${coords.lat},${coords.lng}"
                                target="_blank" class="maps-link">
                                 🗺️ Abrir en Google Maps
                             </a>
                         ` : ''}
 
-                        ${set.photos.length > 0 ? `
+                        ${photoUrls.length > 0 ? `
                             <div class="content-section">
-                                <h4>📷 Fotografías (${set.photos.length})</h4>
+                                <h4>📷 Fotografías (${photoUrls.length})</h4>
                                 <div class="photos-grid">
-                                    ${set.photos.map(photo => `
+                                    ${photoUrls.map(photo => `
                                         <div class="photo-item">
-                                            <img src="${photo.url}" alt="${photo.caption || 'Foto de localización'}" />
+                                            <img src="${photo}" alt="Foto de localización" />
                                         </div>
                                     `).join('')}
                                 </div>
@@ -602,37 +614,41 @@ export default function ReportPage() {
             ) : (
               <div className="space-y-4">
                 {project.sets.map((set) => {
-                  const EvaluationIcon = getEvaluationIcon(set.evaluation);
+                  const EvaluationIcon = getEvaluationIcon(set.status ?? set.evaluation);
+                  const coords = set.coords ?? (set.coordinates
+                    ? { lat: set.coordinates.latitude, lng: set.coordinates.longitude }
+                    : null);
+                  const photoCount = set.photos?.length ?? 0;
                   return (
                     <div key={set.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="font-semibold text-lg">{set.title}</h3>
+                          <h3 className="font-semibold text-lg">{set.name}</h3>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {formatDate(set.createdAt)}
                             </div>
-                            {set.coordinates && (
+                            {coords && (
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                {set.coordinates.latitude.toFixed(4)}, {set.coordinates.longitude.toFixed(4)}
+                                {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
                               </div>
                             )}
-                            {set.photos.length > 0 && (
+                            {photoCount > 0 && (
                               <div className="flex items-center gap-1">
                                 <Camera className="h-3 w-3" />
-                                {set.photos.length} foto{set.photos.length !== 1 ? 's' : ''}
+                                {photoCount} foto{photoCount !== 1 ? 's' : ''}
                               </div>
                             )}
                           </div>
                         </div>
-                        <Badge 
-                          variant="secondary" 
-                          className={`${getEvaluationColor(set.evaluation)} text-white`}
+                        <Badge
+                          variant="secondary"
+                          className={`${getEvaluationColor(set.status ?? set.evaluation)} text-white`}
                         >
                           <EvaluationIcon className="mr-1 h-3 w-3" />
-                          {getEvaluationLabel(set.evaluation)}
+                          {getEvaluationLabel(set.status ?? set.evaluation)}
                         </Badge>
                       </div>
 
@@ -646,13 +662,13 @@ export default function ReportPage() {
                         </div>
                       )}
 
-                      {set.coordinates && (
+                      {coords && (
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              const url = `https://www.google.com/maps?q=${set.coordinates.latitude},${set.coordinates.longitude}`;
+                              const url = `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
                               window.open(url, '_blank');
                             }}
                           >

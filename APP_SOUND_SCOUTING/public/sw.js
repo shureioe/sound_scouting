@@ -2,9 +2,9 @@ const CACHE_NAME = 'sound-scouting-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/apple-touch-icon.png'
+  '/icon-192x192.svg',
+  '/icon-512x512.svg',
+  '/apple-touch-icon.svg'
 ];
 
 // Install event - cache resources

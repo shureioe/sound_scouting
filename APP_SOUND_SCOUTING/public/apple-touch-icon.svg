@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="SoundScouting apple touch icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#9333ea" />
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="156" height="156" rx="40" fill="url(#bg)" />
+  <g fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M90 50c-14 0-25 11-25 25v30c0 14 11 25 25 25s25-11 25-25V75c0-14-11-25-25-25z" />
+    <path d="M58 105c0 18 13 33 32 36v18H74" />
+    <path d="M122 105c0 18-13 33-32 36v18h16" />
+  </g>
+</svg>

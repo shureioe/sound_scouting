@@ -24,19 +24,36 @@ export interface Coordinates {
   timestamp: string;
 }
 
+export type LocationStatus = 'apto' | 'no_apto' | 'pendiente';
+
+export type EvaluationStatus = LocationStatus;
+
+export interface LocationCoords {
+  lat: number;
+  lng: number;
+}
+
 export interface LocationSet {
   id: string;
-  projectId: string;
-  title: string;
-  evaluation: 'apto' | 'no_apto' | 'sin_evaluar';
+  name: string;
+  notes?: string;
+  coords?: LocationCoords | null;
+  photos?: string[];
+  status?: LocationStatus;
+  createdAt: string;
+  updatedAt: string;
+  // Campos legados para mantener compatibilidad con datos anteriores
+  projectId?: string;
+  title?: string;
   tags: string[];
   noiseObservations: string;
   technicalRequirements: string;
-  photos: LocationPhoto[];
-  coordinates?: Coordinates;
-  createdAt: string;
-  updatedAt: string;
+  evaluation?: EvaluationStatus;
+  coordinates?: Coordinates | null;
+  legacyPhotos?: LocationPhoto[];
 }
+
+export type NewLocationSetInput = Omit<LocationSet, 'id' | 'createdAt' | 'updatedAt'>;
 
 export interface Project {
   id: string;
@@ -60,14 +77,6 @@ export interface ProjectFormData {
   name: string;
 }
 
-export interface SetFormData {
-  title: string;
-  evaluation: 'apto' | 'no_apto' | 'sin_evaluar';
-  tags: string;
-  noiseObservations: string;
-  technicalRequirements: string;
-}
-
 export interface TechnicianFormData {
   fullName: string;
   company: string;
@@ -88,8 +97,6 @@ export interface MapLink {
   label: string;
   icon: string;
 }
-
-export type EvaluationStatus = 'apto' | 'no_apto' | 'sin_evaluar';
 
 export interface FileUploadResult {
   success: boolean;
