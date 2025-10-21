@@ -7,19 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createSet } from '@/lib/storage';
-import { LocationSet } from '@/lib/types';
+import { EvaluationStatus, NewLocationSetInput } from '@/lib/types';
 
 interface CreateSetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
-  onSetCreated: (set: LocationSet) => void;
+  onSubmit: (setData: NewLocationSetInput) => Promise<boolean> | boolean;
 }
 
-export default function CreateSetDialog({ open, onOpenChange, projectId, onSetCreated }: CreateSetDialogProps) {
+export default function CreateSetDialog({ open, onOpenChange, onSubmit }: CreateSetDialogProps) {
   const [title, setTitle] = useState('');
-  const [evaluation, setEvaluation] = useState<'apto' | 'no_apto' | 'sin_evaluar'>('sin_evaluar');
+  const [evaluation, setEvaluation] = useState<EvaluationStatus>('pendiente');
   const [tags, setTags] = useState('');
   const [noiseObservations, setNoiseObservations] = useState('');
   const [technicalRequirements, setTechnicalRequirements] = useState('');
@@ -31,26 +29,29 @@ export default function CreateSetDialog({ open, onOpenChange, projectId, onSetCr
     setIsCreating(true);
     try {
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      
-      const newSet = createSet(projectId, {
-        title: title.trim(),
+      const trimmedTitle = title.trim();
+      const wasCreated = await onSubmit({
+        name: trimmedTitle,
+        title: trimmedTitle,
+        status: evaluation,
         evaluation,
         tags: tagsArray,
+        notes: noiseObservations,
         noiseObservations,
         technicalRequirements,
         photos: [],
       });
-
-      if (newSet) {
-        onSetCreated(newSet);
-        // Reset form
-        setTitle('');
-        setEvaluation('sin_evaluar');
-        setTags('');
-        setNoiseObservations('');
-        setTechnicalRequirements('');
-        onOpenChange(false);
+      if (!wasCreated) {
+        return;
       }
+
+      // Reset form
+      setTitle('');
+      setEvaluation('pendiente');
+      setTags('');
+      setNoiseObservations('');
+      setTechnicalRequirements('');
+      onOpenChange(false);
     } catch (error) {
       console.error('Error creating set:', error);
     } finally {
@@ -88,12 +89,12 @@ export default function CreateSetDialog({ open, onOpenChange, projectId, onSetCr
 
           <div className="space-y-2">
             <Label htmlFor="evaluation">Evaluación Inicial</Label>
-            <Select value={evaluation} onValueChange={(value: any) => setEvaluation(value)}>
+            <Select value={evaluation} onValueChange={(value: EvaluationStatus) => setEvaluation(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sin_evaluar">Sin evaluar</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
                 <SelectItem value="apto">Apto</SelectItem>
                 <SelectItem value="no_apto">No apto</SelectItem>
               </SelectContent>

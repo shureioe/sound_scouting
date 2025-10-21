@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { LocationSet, LocationPhoto } from '@/lib/types';
+import { useEffect, useState } from 'react';
+import { EvaluationStatus, LocationSet, LocationPhoto } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,11 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Calendar, Camera, ExternalLink, Edit2, Save, X, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Calendar, Camera, ExternalLink, Edit2, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PhotoManager from './PhotoManager';
 import LocationManager from './LocationManager';
+import { getEvaluationColor, getEvaluationLabel } from '@/lib/evaluation';
 
 interface SetDetailViewProps {
   set: LocationSet;
@@ -27,27 +28,10 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
   const [editedSet, setEditedSet] = useState<LocationSet>(set);
   const [tagsInput, setTagsInput] = useState(set.tags.join(', '));
 
-  const getEvaluationColor = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'bg-green-500';
-      case 'no_apto':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEvaluationLabel = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'Apto';
-      case 'no_apto':
-        return 'No apto';
-      default:
-        return 'Sin evaluar';
-    }
-  };
+  useEffect(() => {
+    setEditedSet(set);
+    setTagsInput(set.tags.join(', '));
+  }, [set]);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es });
@@ -58,7 +42,7 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
     const updatedSet = {
       ...editedSet,
       tags,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     onSetUpdate(updatedSet);
     setEditing(false);
@@ -66,16 +50,14 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
 
   // Handle photos change - auto-save when photos are updated
   const handlePhotosChange = (photos: LocationPhoto[]) => {
-    console.log('Photos changed:', photos);
     const updatedSet = {
       ...editedSet,
-      photos,
-      updatedAt: new Date().toISOString()
+      legacyPhotos: photos,
+      photos: photos.map(photo => photo.url),
+      updatedAt: new Date().toISOString(),
     };
-    console.log('Updated set before save:', updatedSet);
     setEditedSet(updatedSet);
     // Auto-save photos immediately
-    console.log('Calling onSetUpdate with:', updatedSet);
     onSetUpdate(updatedSet);
   };
 
@@ -86,12 +68,17 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
   };
 
   const openInMaps = () => {
-    if (editedSet.coordinates) {
-      const { latitude, longitude } = editedSet.coordinates;
-      const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    const coords = editedSet.coords ?? (editedSet.coordinates
+      ? { lat: editedSet.coordinates.latitude, lng: editedSet.coordinates.longitude }
+      : null);
+
+    if (coords) {
+      const url = `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
       window.open(url, '_blank');
     }
   };
+
+  const photoCount = editedSet.photos?.length ?? editedSet.legacyPhotos?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -100,23 +87,29 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
         <div className="space-y-2">
           {editing ? (
             <Input
-              value={editedSet.title}
-              onChange={(e) => setEditedSet({ ...editedSet, title: e.target.value })}
+              value={editedSet.name}
+              onChange={(e) =>
+                setEditedSet({
+                  ...editedSet,
+                  name: e.target.value,
+                  title: e.target.value,
+                })
+              }
               className="text-2xl font-bold"
             />
           ) : (
-            <h2 className="text-2xl font-bold">{editedSet.title}</h2>
+            <h2 className="text-2xl font-bold">{editedSet.name}</h2>
           )}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               {formatDate(editedSet.createdAt)}
             </div>
-            <Badge 
-              variant="secondary" 
-              className={`${getEvaluationColor(editedSet.evaluation)} text-white`}
+            <Badge
+              variant="secondary"
+              className={`${getEvaluationColor(editedSet.status ?? editedSet.evaluation)} text-white`}
             >
-              {getEvaluationLabel(editedSet.evaluation)}
+              {getEvaluationLabel(editedSet.status ?? editedSet.evaluation)}
             </Badge>
           </div>
         </div>
@@ -144,7 +137,7 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
       <Tabs defaultValue="info" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="photos">Fotos ({editedSet.photos.length})</TabsTrigger>
+          <TabsTrigger value="photos">Fotos ({photoCount})</TabsTrigger>
           <TabsTrigger value="location">Ubicación</TabsTrigger>
           <TabsTrigger value="technical">Técnico</TabsTrigger>
         </TabsList>
@@ -158,9 +151,15 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
               <div>
                 <Label htmlFor="evaluation">Evaluación</Label>
                 {editing ? (
-                  <Select 
-                    value={editedSet.evaluation} 
-                    onValueChange={(value: any) => setEditedSet({ ...editedSet, evaluation: value })}
+                  <Select
+                    value={editedSet.status ?? editedSet.evaluation ?? 'pendiente'}
+                    onValueChange={(value: EvaluationStatus) =>
+                      setEditedSet({
+                        ...editedSet,
+                        status: value,
+                        evaluation: value,
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -168,15 +167,15 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
                     <SelectContent>
                       <SelectItem value="apto">Apto</SelectItem>
                       <SelectItem value="no_apto">No apto</SelectItem>
-                      <SelectItem value="sin_evaluar">Sin evaluar</SelectItem>
+                      <SelectItem value="pendiente">Pendiente</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Badge 
-                    variant="secondary" 
-                    className={`${getEvaluationColor(editedSet.evaluation)} text-white mt-2`}
+                  <Badge
+                    variant="secondary"
+                    className={`${getEvaluationColor(editedSet.status ?? editedSet.evaluation)} text-white mt-2`}
                   >
-                    {getEvaluationLabel(editedSet.evaluation)}
+                    {getEvaluationLabel(editedSet.status ?? editedSet.evaluation)}
                   </Badge>
                 )}
               </div>
@@ -236,12 +235,12 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
                 Fotografías
               </CardTitle>
               <CardDescription>
-                {editedSet.photos.length} foto{editedSet.photos.length !== 1 ? 's' : ''} cargada{editedSet.photos.length !== 1 ? 's' : ''}
+                {photoCount} foto{photoCount !== 1 ? 's' : ''} cargada{photoCount !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <PhotoManager
-                photos={editedSet.photos}
+                photos={editedSet.legacyPhotos ?? []}
                 onPhotosChange={handlePhotosChange}
                 disabled={false} // Always enabled for photo management
               />
@@ -259,8 +258,28 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
             </CardHeader>
             <CardContent>
               <LocationManager
-                coordinates={editedSet.coordinates}
-                onCoordinatesChange={(coords) => setEditedSet({ ...editedSet, coordinates: coords })}
+                coordinates={
+                  editedSet.coordinates ??
+                  (editedSet.coords
+                    ? {
+                        latitude: editedSet.coords.lat,
+                        longitude: editedSet.coords.lng,
+                        timestamp: new Date().toISOString(),
+                      }
+                    : undefined)
+                }
+                onCoordinatesChange={(coords) =>
+                  setEditedSet({
+                    ...editedSet,
+                    coordinates: coords,
+                    coords: coords
+                      ? {
+                          lat: coords.latitude,
+                          lng: coords.longitude,
+                        }
+                      : null,
+                  })
+                }
                 disabled={!editing}
               />
             </CardContent>
