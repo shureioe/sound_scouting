@@ -24,27 +24,13 @@ export interface Coordinates {
   timestamp: string;
 }
 
-export type LocationStatus = 'apto' | 'no_apto' | 'pendiente';
-
-export type EvaluationStatus = LocationStatus;
-
-export interface LocationCoords {
-  lat: number;
-  lng: number;
-}
+export type EvaluationStatus = 'apto' | 'no_apto' | 'sin_evaluar';
 
 export interface LocationSet {
   id: string;
-  name: string;
-  notes?: string;
-  coords?: LocationCoords | null;
-  photos?: string[];
-  status?: LocationStatus;
-  createdAt: string;
-  updatedAt: string;
-  // Campos legados para mantener compatibilidad con datos anteriores
-  projectId?: string;
-  title?: string;
+  projectId: string;
+  title: string;
+  evaluation: EvaluationStatus;
   tags: string[];
   noiseObservations: string;
   technicalRequirements: string;
@@ -53,7 +39,7 @@ export interface LocationSet {
   legacyPhotos?: LocationPhoto[];
 }
 
-export type NewLocationSetInput = Omit<LocationSet, 'id' | 'createdAt' | 'updatedAt'>;
+export type NewLocationSetInput = Omit<LocationSet, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;
 
 export interface Project {
   id: string;

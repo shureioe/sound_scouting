@@ -1,15 +1,16 @@
 'use client';
 
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-export type CardProps = HTMLAttributes<HTMLElement> & {
+export type CardProps = {
   title?: ReactNode;
   description?: ReactNode;
   header?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
+  className?: string;
   contentClassName?: string;
 };
 
@@ -21,18 +22,12 @@ export function Card({
   children,
   className,
   contentClassName,
-  ...rest
 }: CardProps) {
-  const isInteractive = typeof rest.onClick === 'function';
-
   return (
     <article
-      {...rest}
       className={cn(
         'rounded-xl border border-border/70 bg-card text-card-foreground shadow-soft-md',
-        isInteractive &&
-          'transition-shadow hover:shadow-soft-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 cursor-pointer',
-        className,
+        className
       )}
     >
       {(title || description || header) && (

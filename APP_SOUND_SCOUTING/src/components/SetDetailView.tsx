@@ -151,14 +151,10 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
               <div>
                 <Label htmlFor="evaluation">Evaluación</Label>
                 {editing ? (
-                  <Select
-                    value={editedSet.status ?? editedSet.evaluation ?? 'pendiente'}
+                  <Select 
+                    value={editedSet.evaluation} 
                     onValueChange={(value: EvaluationStatus) =>
-                      setEditedSet({
-                        ...editedSet,
-                        status: value,
-                        evaluation: value,
-                      })
+                      setEditedSet({ ...editedSet, evaluation: value })
                     }
                   >
                     <SelectTrigger>
