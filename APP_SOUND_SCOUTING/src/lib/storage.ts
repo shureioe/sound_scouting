@@ -1,4 +1,4 @@
-import { LocalStorageData, Project, TechnicianConfig, LocationSet } from './types';
+import { LocalStorageData, Project, TechnicianConfig, LocationSet, NewLocationSetInput } from './types';
 
 const STORAGE_KEY = 'soundScoutingData';
 
@@ -44,18 +44,11 @@ export const getStoredData = (): LocalStorageData => {
 // Guardar datos en el almacenamiento local
 export const saveStoredData = (data: LocalStorageData): void => {
   if (typeof window === 'undefined') {
-    console.log('Storage: Cannot save - window is undefined');
     return;
   }
 
   try {
-    console.log('Storage: Attempting to save data to localStorage', data);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    console.log('Storage: Successfully saved to localStorage');
-    
-    // Verify the save was successful
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    console.log('Storage: Verification - data in localStorage after save:', savedData ? 'Data exists' : 'No data found');
   } catch (error) {
     console.error('Storage: Error writing to localStorage:', error);
   }
@@ -134,7 +127,7 @@ export const getCurrentProject = (): Project | undefined => {
 };
 
 // Gestión de sets
-export const createSet = (projectId: string, setData: Omit<LocationSet, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>): LocationSet | null => {
+export const createSet = (projectId: string, setData: NewLocationSetInput): LocationSet | null => {
   const data = getStoredData();
   const projectIndex = data.projects.findIndex(p => p.id === projectId);
 
@@ -158,24 +151,18 @@ export const createSet = (projectId: string, setData: Omit<LocationSet, 'id' | '
 };
 
 export const updateSet = (projectId: string, setId: string, updates: Partial<LocationSet>): LocationSet | null => {
-  console.log('Storage: updateSet called', { projectId, setId, updates });
   const data = getStoredData();
-  console.log('Storage: Current data from localStorage', data);
   const projectIndex = data.projects.findIndex(p => p.id === projectId);
 
   if (projectIndex === -1) {
-    console.error('Storage: Project not found', projectId);
     return null;
   }
 
   const setIndex = data.projects[projectIndex].sets.findIndex(s => s.id === setId);
   if (setIndex === -1) {
-    console.error('Storage: Set not found', setId);
     return null;
   }
 
-  console.log('Storage: Found set to update', data.projects[projectIndex].sets[setIndex]);
-  
   data.projects[projectIndex].sets[setIndex] = {
     ...data.projects[projectIndex].sets[setIndex],
     ...updates,
@@ -183,11 +170,7 @@ export const updateSet = (projectId: string, setId: string, updates: Partial<Loc
   };
 
   data.projects[projectIndex].updatedAt = new Date().toISOString();
-  console.log('Storage: Updated data before save', data);
   saveStoredData(data);
-  console.log('Storage: Data saved to localStorage');
-  
-  console.log('Storage: Returning updated set', data.projects[projectIndex].sets[setIndex]);
   return data.projects[projectIndex].sets[setIndex];
 };
 

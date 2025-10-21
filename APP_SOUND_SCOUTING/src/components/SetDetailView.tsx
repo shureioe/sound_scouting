@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { LocationSet, LocationPhoto } from '@/lib/types';
+import { useEffect, useState } from 'react';
+import { EvaluationStatus, LocationSet, LocationPhoto } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,11 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Calendar, Camera, ExternalLink, Edit2, Save, X, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Calendar, Camera, ExternalLink, Edit2, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PhotoManager from './PhotoManager';
 import LocationManager from './LocationManager';
+import { getEvaluationColor, getEvaluationLabel } from '@/lib/evaluation';
 
 interface SetDetailViewProps {
   set: LocationSet;
@@ -27,27 +28,10 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
   const [editedSet, setEditedSet] = useState<LocationSet>(set);
   const [tagsInput, setTagsInput] = useState(set.tags.join(', '));
 
-  const getEvaluationColor = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'bg-green-500';
-      case 'no_apto':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEvaluationLabel = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'Apto';
-      case 'no_apto':
-        return 'No apto';
-      default:
-        return 'Sin evaluar';
-    }
-  };
+  useEffect(() => {
+    setEditedSet(set);
+    setTagsInput(set.tags.join(', '));
+  }, [set]);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d 'de' MMMM 'de' yyyy 'a las' HH:mm", { locale: es });
@@ -66,16 +50,13 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
 
   // Handle photos change - auto-save when photos are updated
   const handlePhotosChange = (photos: LocationPhoto[]) => {
-    console.log('Photos changed:', photos);
     const updatedSet = {
       ...editedSet,
       photos,
       updatedAt: new Date().toISOString()
     };
-    console.log('Updated set before save:', updatedSet);
     setEditedSet(updatedSet);
     // Auto-save photos immediately
-    console.log('Calling onSetUpdate with:', updatedSet);
     onSetUpdate(updatedSet);
   };
 
@@ -160,7 +141,9 @@ export default function SetDetailView({ set, onSetUpdate, onClose }: SetDetailVi
                 {editing ? (
                   <Select 
                     value={editedSet.evaluation} 
-                    onValueChange={(value: any) => setEditedSet({ ...editedSet, evaluation: value })}
+                    onValueChange={(value: EvaluationStatus) =>
+                      setEditedSet({ ...editedSet, evaluation: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
