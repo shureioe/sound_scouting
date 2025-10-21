@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SoundScouting icon large">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="384" height="384" rx="96" fill="url(#bg)" />
+  <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 152c-40 0-72 32-72 72v72c0 40 32 72 72 72s72-32 72-72v-72c0-40-32-72-72-72z" />
+    <path d="M168 264c0 60 44 108 100 112v48h-64" />
+    <path d="M344 264c0 60-44 108-100 112v48h64" />
+  </g>
+</svg>
