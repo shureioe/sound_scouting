@@ -23,8 +23,6 @@ import {
   setSetCoords,
   updateSet,
 } from '@/lib/storage';
-import { createPdfDocument, downloadPdfDocument, getImageFormatFromDataUrl, loadImageDimensions } from '@/lib/pdf';
-import { getEvaluationLabel } from '@/lib/evaluation';
 import type { LocationSet, LocationStatus, Project } from '@/lib/types';
 
 const statusOptions: Array<{ value: LocationStatus; label: string }> = [
@@ -89,7 +87,6 @@ export default function LocationDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -289,119 +286,6 @@ export default function LocationDetailPage() {
     return new Date(locationSet.createdAt).toLocaleDateString('es-ES');
   }, [locationSet?.createdAt]);
 
-  const statusLabel = locationSet
-    ? getEvaluationLabel(locationSet.status ?? locationSet.evaluation ?? 'pendiente')
-    : '';
-
-  const handleExportPdf = async () => {
-    if (!locationSet) {
-      return;
-    }
-
-    setIsExporting(true);
-
-    try {
-      const doc = await createPdfDocument();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - margin * 2;
-      let cursorY = margin;
-
-      doc.setFontSize(20);
-      doc.text(locationSet.name ?? 'Localización', margin, cursorY);
-      cursorY += 12;
-
-      doc.setFontSize(12);
-      doc.text(`Estado: ${statusLabel}`, margin, cursorY);
-      cursorY += 8;
-
-      const referenceDate = locationSet.updatedAt ?? locationSet.createdAt;
-      const formattedDate = referenceDate
-        ? new Date(referenceDate).toLocaleString('es-ES')
-        : new Date().toLocaleString('es-ES');
-      doc.text(`Fecha: ${formattedDate}`, margin, cursorY);
-      cursorY += 8;
-
-      const notes = locationSet.notes?.trim();
-      if (notes && notes.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Notas', margin, cursorY);
-        cursorY += 8;
-
-        doc.setFontSize(12);
-        const noteLines = doc.splitTextToSize(notes, contentWidth) as string[];
-        const notesHeight = noteLines.length * 6;
-        if (cursorY + notesHeight > pageHeight - margin) {
-          doc.addPage();
-          cursorY = margin;
-        }
-        doc.text(noteLines, margin, cursorY);
-        cursorY += notesHeight + 8;
-      } else {
-        doc.text('Notas: sin información registrada.', margin, cursorY);
-        cursorY += 8;
-      }
-
-      if (locationSet.coords) {
-        const lat = locationSet.coords.lat.toFixed(6);
-        const lng = locationSet.coords.lng.toFixed(6);
-        doc.text(`Coordenadas: ${lat}, ${lng}`, margin, cursorY);
-        cursorY += 8;
-      } else {
-        doc.text('Coordenadas: sin datos guardados.', margin, cursorY);
-        cursorY += 8;
-      }
-
-      const photos = locationSet.photos?.slice(0, 2) ?? [];
-      if (photos.length > 0) {
-        doc.setFontSize(14);
-        if (cursorY + 8 > pageHeight - margin) {
-          doc.addPage();
-          cursorY = margin;
-        }
-        doc.text('Fotos', margin, cursorY);
-        cursorY += 8;
-
-        doc.setFontSize(12);
-        for (const photo of photos) {
-          const format = getImageFormatFromDataUrl(photo);
-          const { width, height } = await loadImageDimensions(photo);
-          const ratio = height > 0 ? height / width : 0;
-          const maxWidth = contentWidth;
-          let renderWidth = maxWidth;
-          let renderHeight = ratio > 0 ? maxWidth * ratio : maxWidth * 0.75;
-
-          if (renderHeight > pageHeight - margin * 2) {
-            renderHeight = pageHeight - margin * 2;
-            renderWidth = renderHeight / (ratio || 1);
-          }
-
-          if (cursorY + renderHeight > pageHeight - margin) {
-            doc.addPage();
-            cursorY = margin;
-          }
-
-          doc.addImage(photo, format, margin, cursorY, renderWidth, renderHeight);
-          cursorY += renderHeight + 8;
-
-          if (cursorY > pageHeight - margin) {
-            doc.addPage();
-            cursorY = margin;
-          }
-        }
-      }
-
-      downloadPdfDocument(doc, `Localizacion-${locationSet.id}.pdf`);
-      setFeedback({ type: 'success', message: 'Se exportó el PDF de la localización.' });
-    } catch (error) {
-      console.error('Error al exportar la localización', error);
-      setFeedback({ type: 'error', message: 'No se pudo generar el PDF.' });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   if (!projectId || !locationId) {
     return null;
   }
@@ -421,24 +305,14 @@ export default function LocationDetailPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-xl px-md py-lg">
       <header className="flex flex-col gap-sm">
-        <div className="flex flex-wrap items-center gap-xs">
-          <Button
-            variant="subtle"
-            type="button"
-            className="w-fit px-sm py-1 text-sm"
-            onClick={() => router.push(`/project/${projectId}`)}
-          >
-            ← Volver al proyecto
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleExportPdf}
-            disabled={isExporting}
-          >
-            {isExporting ? 'Exportando…' : 'Exportar PDF'}
-          </Button>
-        </div>
+        <Button
+          variant="subtle"
+          type="button"
+          className="w-fit px-sm py-1 text-sm"
+          onClick={() => router.push(`/project/${projectId}`)}
+        >
+          ← Volver al proyecto
+        </Button>
 
         <div className="flex flex-col gap-2xs">
           <h1 className="text-3xl font-semibold text-foreground">{locationName}</h1>

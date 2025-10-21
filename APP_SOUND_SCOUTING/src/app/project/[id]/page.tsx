@@ -1,49 +1,23 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-} from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Separator } from '@/components/ui/Separator';
-import { getEvaluationLabel } from '@/lib/evaluation';
-import { createPdfDocument, downloadPdfDocument, getImageFormatFromDataUrl, loadImageDimensions } from '@/lib/pdf';
-import { createSet, deleteSet, getProjectById } from '@/lib/storage';
-import type { LocationSet, NewLocationSetInput, Project } from '@/lib/types';
-
-const emptySetDefaults: Omit<NewLocationSetInput, 'name' | 'title'> = {
-  status: 'pendiente',
-  notes: '',
-  tags: [],
-  noiseObservations: '',
-  technicalRequirements: '',
-  photos: [],
-};
-
-const feedbackToneMap = {
-  success: 'success',
-  info: 'neutral',
-  error: 'danger',
-} as const;
-
-type FeedbackState =
-  | { type: 'success'; message: string }
-  | { type: 'info'; message: string }
-  | { type: 'error'; message: string }
-  | null;
+import { Project, LocationSet, NewLocationSetInput } from '@/lib/types';
+import { getProjectById, setCurrentProject, updateSet, deleteSet, createSet } from '@/lib/storage';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Plus, MapPin, Calendar, Settings, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import SetCard from '@/components/SetCard';
+import CreateSetDialog from '@/components/CreateSetDialog';
 
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
+ codex/update-on-application-development-status-uzwjav
   const projectId = params?.id;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -51,7 +25,6 @@ export default function ProjectPage() {
   const [locationName, setLocationName] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
-  const [isExportingProject, setIsExportingProject] = useState(false);
 
   const refreshProject = useCallback(() => {
     if (!projectId) {
@@ -64,10 +37,112 @@ export default function ProjectPage() {
       router.replace('/');
       return;
     }
+  const loadProject = useCallback(() => {
+    setLoading(true);
+    const loadedProject = getProjectById(projectId);
+
+    if (loadedProject) {
+      setCurrentProject(projectId);
+      setProject(loadedProject);
+    } else {
+      // Redirigir a la página principal si el proyecto no existe
+      router.push('/');
+    }
+    setLoading(false);
+  }, [projectId, router]);
+
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
+
+  const handleSetCreated = (setData: NewLocationSetInput): boolean => {
+    if (!project) {
+      return false;
+    }
+
+    const savedSet = createSet(project.id, setData);
+
+    if (!savedSet) {
+      return false;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const hasSet = current.sets.some((existingSet) => existingSet.id === savedSet.id);
+      const updatedSets = hasSet
+        ? current.sets.map((existingSet) =>
+            existingSet.id === savedSet.id ? savedSet : existingSet
+          )
+        : [...current.sets, savedSet];
+
+      return {
+        ...current,
+        sets: updatedSets,
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    return true;
+  };
+
+  const handleSetUpdated = (updatedSet: LocationSet) => {
+    if (!project) {
+      return;
+    }
+
+    const savedSet = updateSet(project.id, updatedSet.id, updatedSet);
+
+    if (!savedSet) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.map(set =>
+          set.id === savedSet.id ? savedSet : set
+        ),
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+
+  const handleSetDeleted = (setId: string) => {
+    if (!project) {
+      return;
+    }
+
+    const deleted = deleteSet(project.id, setId);
+
+    if (!deleted) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.filter(set => set.id !== setId),
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+ main
 
     setProject(storedProject);
   }, [projectId, router]);
 
+ codex/update-on-application-development-status-uzwjav
   useEffect(() => {
     setIsLoading(true);
     refreshProject();
@@ -79,6 +154,8 @@ export default function ProjectPage() {
   }
 
   if (isLoading || !project) {
+  if (loading) {
+    main
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-xl px-md py-lg">
         <Card>
@@ -98,11 +175,9 @@ export default function ProjectPage() {
       return;
     }
 
-    const trimmedName = locationName.trim();
     const payload: NewLocationSetInput = {
       ...emptySetDefaults,
-      name: trimmedName,
-      title: trimmedName,
+      title: locationName.trim(),
     } as const;
 
     const savedSet = createSet(project.id, payload);
@@ -114,7 +189,7 @@ export default function ProjectPage() {
 
     setLocationName('');
     setFormError(null);
-    setFeedback({ type: 'success', message: `Se creó "${savedSet.name}".` });
+    setFeedback({ type: 'success', message: `Se creó "${savedSet.title}".` });
     refreshProject();
   };
 
@@ -126,123 +201,11 @@ export default function ProjectPage() {
       return;
     }
 
-    setFeedback({ type: 'info', message: `Se borró "${setToRemove.name}".` });
+    setFeedback({ type: 'info', message: `Se borró "${setToRemove.title}".` });
     refreshProject();
   };
 
   const totalLocations = project.sets.length;
-
-  const handleNavigateToSet = (setId: string) => {
-    router.push(`/project/${project.id}/location/${setId}`);
-  };
-
-  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>, setId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleNavigateToSet(setId);
-    }
-  };
-
-  const handleExportProjectPdf = async () => {
-    if (!project) {
-      return;
-    }
-
-    setIsExportingProject(true);
-
-    try {
-      const doc = await createPdfDocument();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - margin * 2;
-      let cursorY = margin;
-
-      const ensureSpace = (height: number) => {
-        if (cursorY + height > pageHeight - margin) {
-          doc.addPage();
-          cursorY = margin;
-        }
-      };
-
-      doc.setFontSize(22);
-      doc.text(project.name, margin, cursorY);
-      cursorY += 14;
-
-      doc.setFontSize(12);
-      doc.text(`Fecha de exportación: ${new Date().toLocaleString('es-ES')}`, margin, cursorY);
-      cursorY += 10;
-
-      doc.setFontSize(16);
-      doc.text('Localizaciones', margin, cursorY);
-      cursorY += 10;
-
-      doc.setFontSize(12);
-      if (project.sets.length === 0) {
-        doc.text('No hay localizaciones registradas en este proyecto.', margin, cursorY);
-      } else {
-        for (const setItem of project.sets) {
-          ensureSpace(30);
-
-          doc.setFontSize(14);
-          doc.text(setItem.name ?? 'Localización sin nombre', margin, cursorY);
-          cursorY += 8;
-
-          doc.setFontSize(12);
-          const statusLabel = getEvaluationLabel(setItem.status ?? setItem.evaluation ?? 'pendiente');
-          doc.text(`Estado: ${statusLabel}`, margin, cursorY);
-          cursorY += 6;
-
-          const notesSummary = (setItem.notes ?? '')
-            .split(/\r?\n/)
-            .map(line => line.trim())
-            .find(line => line.length > 0);
-
-          const summaryText = notesSummary ?? 'Sin notas registradas.';
-          const summaryLines = doc.splitTextToSize(`Notas: ${summaryText}`, contentWidth) as string[];
-          const summaryHeight = summaryLines.length * 6;
-          ensureSpace(summaryHeight);
-          doc.text(summaryLines, margin, cursorY);
-          cursorY += summaryHeight + 4;
-
-          const firstPhoto = setItem.photos?.[0];
-          if (firstPhoto) {
-            const { width, height } = await loadImageDimensions(firstPhoto);
-            const ratio = height > 0 ? height / width : 0;
-            const maxWidth = Math.min(60, contentWidth);
-            let renderWidth = maxWidth;
-            let renderHeight = ratio > 0 ? maxWidth * ratio : maxWidth * 0.75;
-
-            if (renderHeight > pageHeight - margin * 2) {
-              renderHeight = pageHeight - margin * 2;
-              renderWidth = renderHeight / (ratio || 1);
-            }
-
-            if (cursorY + renderHeight > pageHeight - margin) {
-              doc.addPage();
-              cursorY = margin;
-            }
-
-            doc.addImage(firstPhoto, getImageFormatFromDataUrl(firstPhoto), margin, cursorY, renderWidth, renderHeight);
-            cursorY += renderHeight + 6;
-          }
-
-          doc.setDrawColor(220);
-          doc.line(margin, cursorY, pageWidth - margin, cursorY);
-          doc.setDrawColor(0);
-          cursorY += 6;
-        }
-      }
-
-      downloadPdfDocument(doc, `Proyecto-${project.id}.pdf`);
-      setFeedback({ type: 'success', message: 'Se exportó el PDF del proyecto.' });
-    } catch (error) {
-      console.error('Error al exportar el proyecto', error);
-      setFeedback({ type: 'error', message: 'No se pudo generar el PDF del proyecto.' });
-    } finally {
-      setIsExportingProject(false);
-    }
-  };
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-xl px-md py-lg">
@@ -256,29 +219,18 @@ export default function ProjectPage() {
           ← Volver a proyectos
         </Button>
 
-        <div className="flex flex-col gap-sm sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2xs sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-foreground">{project.name}</h1>
             <p className="text-sm text-foreground/70">
               Gestiona y organiza las localizaciones evaluadas para este proyecto.
             </p>
           </div>
-          <div className="flex flex-col items-start gap-xs sm:items-end">
-            <Badge tone="neutral" className="w-fit">
-              {totalLocations === 1
-                ? '1 localización'
-                : `${totalLocations} localizaciones`}
-            </Badge>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleExportProjectPdf}
-              disabled={isExportingProject}
-              className="w-full sm:w-auto"
-            >
-              {isExportingProject ? 'Exportando…' : 'Exportar PDF del proyecto'}
-            </Button>
-          </div>
+          <Badge tone="neutral" className="w-fit">
+            {totalLocations === 1
+              ? '1 localización'
+              : `${totalLocations} localizaciones`}
+          </Badge>
         </div>
       </header>
 
@@ -337,21 +289,14 @@ export default function ProjectPage() {
             {project.sets.map((setItem, index) => (
               <Card
                 key={`${setItem.id}-${index}`}
-                title={setItem.name}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleNavigateToSet(setItem.id)}
-                onKeyDown={event => handleCardKeyDown(event, setItem.id)}
+                title={setItem.title}
                 footer={
                   <div className="flex justify-end">
                     <Button
                       type="button"
                       variant="subtle"
                       className="text-danger hover:text-danger"
-                      onClick={event => {
-                        event.stopPropagation();
-                        handleDeleteSet(setItem);
-                      }}
+                      onClick={() => handleDeleteSet(setItem)}
                     >
                       Borrar
                     </Button>
@@ -359,12 +304,7 @@ export default function ProjectPage() {
                 }
               >
                 <div className="flex flex-col gap-2xs text-sm text-foreground/70">
-                  <p>
-                    Estado:{' '}
-                    <strong className="font-medium text-foreground">
-                      {getEvaluationLabel(setItem.status ?? setItem.evaluation ?? 'pendiente')}
-                    </strong>
-                  </p>
+                  <p>Estado: <strong className="font-medium text-foreground">{setItem.evaluation}</strong></p>
                   <p className="text-xs text-foreground/60">
                     Creado el {new Date(setItem.createdAt).toLocaleDateString('es-ES')}
                   </p>
@@ -373,7 +313,17 @@ export default function ProjectPage() {
             ))}
           </div>
         )}
+ codex/update-on-application-development-status-uzwjav
       </section>
+      </div>
+
+      {/* Create Set Dialog */}
+      <CreateSetDialog
+        open={showCreateSetDialog}
+        onOpenChange={setShowCreateSetDialog}
+        onSubmit={handleSetCreated}
+      />
+ main
     </div>
   );
 }
