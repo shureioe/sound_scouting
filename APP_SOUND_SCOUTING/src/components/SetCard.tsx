@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { LocationSet } from '@/lib/types';
+import { getEvaluationColor, getEvaluationLabel } from '@/lib/evaluation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MapPin, Calendar, Camera, Trash2, Edit, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { MapPin, Calendar, Camera, Trash2, Edit, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SetDetailView from './SetDetailView';
@@ -20,28 +21,6 @@ interface SetCardProps {
 
 export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps) {
   const [showDetail, setShowDetail] = useState(false);
-
-  const getEvaluationColor = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'bg-green-500';
-      case 'no_apto':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEvaluationLabel = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'Apto';
-      case 'no_apto':
-        return 'No apto';
-      default:
-        return 'Sin evaluar';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "d 'de' MMMM", { locale: es });

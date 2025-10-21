@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Project, LocationSet } from '@/lib/types';
-import { getProjectById, getCurrentProject, setCurrentProject, updateSet, deleteSet, createSet } from '@/lib/storage';
+import { Project, LocationSet, NewLocationSetInput } from '@/lib/types';
+import { getProjectById, setCurrentProject, updateSet, deleteSet, createSet } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Plus, MapPin, Calendar, Settings, FileText, Camera } from 'lucide-react';
+import { ArrowLeft, Plus, MapPin, Calendar, Settings, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import SetCard from '@/components/SetCard';
@@ -23,14 +22,10 @@ export default function ProjectPage() {
   const [showCreateSetDialog, setShowCreateSetDialog] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadProject();
-  }, [projectId]);
-
-  const loadProject = () => {
+  const loadProject = useCallback(() => {
     setLoading(true);
     const loadedProject = getProjectById(projectId);
-    
+
     if (loadedProject) {
       setCurrentProject(projectId);
       setProject(loadedProject);
@@ -39,73 +34,93 @@ export default function ProjectPage() {
       router.push('/');
     }
     setLoading(false);
-  };
+  }, [projectId, router]);
 
-  const handleSetCreated = (newSet: LocationSet) => {
-    console.log('handleSetCreated called with:', newSet);
-    if (project) {
-      // Create the set in localStorage first
-      const savedSet = createSet(project.id, newSet);
-      console.log('Set created in localStorage:', savedSet);
-      
-      if (savedSet) {
-        // Update the local state
-        const updatedProject = {
-          ...project,
-          sets: [...project.sets, savedSet],
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('Project state updated after creation:', updatedProject);
-      }
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
+
+  const handleSetCreated = (setData: NewLocationSetInput): boolean => {
+    if (!project) {
+      return false;
     }
+
+    const savedSet = createSet(project.id, setData);
+
+    if (!savedSet) {
+      return false;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const hasSet = current.sets.some((existingSet) => existingSet.id === savedSet.id);
+      const updatedSets = hasSet
+        ? current.sets.map((existingSet) =>
+            existingSet.id === savedSet.id ? savedSet : existingSet
+          )
+        : [...current.sets, savedSet];
+
+      return {
+        ...current,
+        sets: updatedSets,
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    return true;
   };
 
   const handleSetUpdated = (updatedSet: LocationSet) => {
-    console.log('ProjectPage: handleSetUpdated called with:', updatedSet);
-    if (project) {
-      // Update the set in localStorage first - note the parameter order: projectId, setId, updates
-      const savedSet = updateSet(project.id, updatedSet.id, updatedSet);
-      console.log('ProjectPage: Set saved to localStorage:', savedSet);
-      
-      if (savedSet) {
-        // Update the local state
-        const updatedSets = project.sets.map(set => 
-          set.id === updatedSet.id ? savedSet : set
-        );
-        const updatedProject = {
-          ...project,
-          sets: updatedSets,
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('ProjectPage: Project state updated:', updatedProject);
-      } else {
-        console.error('ProjectPage: Failed to save set to localStorage');
-      }
-    } else {
-      console.error('ProjectPage: No project found');
+    if (!project) {
+      return;
     }
+
+    const savedSet = updateSet(project.id, updatedSet.id, updatedSet);
+
+    if (!savedSet) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.map(set =>
+          set.id === savedSet.id ? savedSet : set
+        ),
+        updatedAt: new Date().toISOString()
+      };
+    });
   };
 
   const handleSetDeleted = (setId: string) => {
-    if (project) {
-      // Delete the set from localStorage first
-      const deleted = deleteSet(project.id, setId);
-      console.log('Set deleted from localStorage:', deleted);
-      
-      if (deleted) {
-        // Update the local state
-        const updatedSets = project.sets.filter(set => set.id !== setId);
-        const updatedProject = {
-          ...project,
-          sets: updatedSets,
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('Project state updated after deletion:', updatedProject);
-      }
+    if (!project) {
+      return;
     }
+
+    const deleted = deleteSet(project.id, setId);
+
+    if (!deleted) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.filter(set => set.id !== setId),
+        updatedAt: new Date().toISOString()
+      };
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -139,28 +154,6 @@ export default function ProjectPage() {
       console.log('No data found in localStorage');
     }
     console.log('=== END DEBUG ===');
-  };
-
-  const getEvaluationColor = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'bg-green-500';
-      case 'no_apto':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEvaluationLabel = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'Apto';
-      case 'no_apto':
-        return 'No apto';
-      default:
-        return 'Sin evaluar';
-    }
   };
 
   if (loading) {
@@ -280,8 +273,7 @@ export default function ProjectPage() {
       <CreateSetDialog
         open={showCreateSetDialog}
         onOpenChange={setShowCreateSetDialog}
-        projectId={projectId}
-        onSetCreated={handleSetCreated}
+        onSubmit={handleSetCreated}
       />
     </div>
   );
