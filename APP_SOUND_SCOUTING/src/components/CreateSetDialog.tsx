@@ -33,6 +33,7 @@ export default function CreateSetDialog({ open, onOpenChange, onSubmit }: Create
         title: title.trim(),
         evaluation,
         tags: tagsArray,
+        notes: noiseObservations,
         noiseObservations,
         technicalRequirements,
         photos: [],
@@ -90,7 +91,7 @@ export default function CreateSetDialog({ open, onOpenChange, onSubmit }: Create
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sin_evaluar">Sin evaluar</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
                 <SelectItem value="apto">Apto</SelectItem>
                 <SelectItem value="no_apto">No apto</SelectItem>
               </SelectContent>

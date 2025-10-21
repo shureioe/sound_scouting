@@ -31,9 +31,12 @@ export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps)
   };
 
   const openInMaps = () => {
-    if (set.coordinates) {
-      const { latitude, longitude } = set.coordinates;
-      const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    const coords = set.coords ?? (set.coordinates
+      ? { lat: set.coordinates.latitude, lng: set.coordinates.longitude }
+      : null);
+
+    if (coords) {
+      const url = `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
       window.open(url, '_blank');
     }
   };
@@ -44,18 +47,18 @@ export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps)
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1">
-              <CardTitle className="text-lg line-clamp-2">{set.title}</CardTitle>
+              <CardTitle className="text-lg line-clamp-2">{set.name}</CardTitle>
               <CardDescription className="flex items-center gap-2">
                 <Calendar className="h-3 w-3" />
                 {formatDate(set.createdAt)}
               </CardDescription>
             </div>
             <div className="flex flex-col gap-1">
-              <Badge 
-                variant="secondary" 
-                className={`${getEvaluationColor(set.evaluation)} text-white text-xs`}
+              <Badge
+                variant="secondary"
+                className={`${getEvaluationColor(set.status ?? set.evaluation)} text-white text-xs`}
               >
-                {getEvaluationLabel(set.evaluation)}
+                {getEvaluationLabel(set.status ?? set.evaluation)}
               </Badge>
               <div className="flex gap-1">
                 <Button
@@ -82,7 +85,7 @@ export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps)
                     <AlertDialogHeader>
                       <AlertDialogTitle>¿Eliminar localización?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Esta acción eliminará permanentemente la localización "{set.title}" y todas sus fotos. Esta acción no se puede deshacer.
+                        Esta acción eliminará permanentemente la localización "{set.name}" y todas sus fotos. Esta acción no se puede deshacer.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -115,20 +118,26 @@ export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps)
           )}
 
           {/* Photos */}
-          {set.photos.length > 0 && (
+          {(set.photos?.length ?? 0) > 0 && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Camera className="h-3 w-3" />
-              <span>{set.photos.length} foto{set.photos.length !== 1 ? 's' : ''}</span>
+              <span>
+                {set.photos?.length ?? 0} foto{(set.photos?.length ?? 0) !== 1 ? 's' : ''}
+              </span>
             </div>
           )}
 
           {/* Coordinates */}
-          {set.coordinates && (
+          {(set.coordinates || set.coords) && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-3 w-3" />
                 <span className="truncate">
-                  {set.coordinates.latitude.toFixed(6)}, {set.coordinates.longitude.toFixed(6)}
+                  {(
+                    set.coordinates?.latitude ?? set.coords?.lat ?? 0
+                  ).toFixed(6)}, {(
+                    set.coordinates?.longitude ?? set.coords?.lng ?? 0
+                  ).toFixed(6)}
                 </span>
               </div>
               <Button
@@ -157,7 +166,7 @@ export default function SetCard({ set, onSetUpdate, onSetDelete }: SetCardProps)
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{set.title}</DialogTitle>
+            <DialogTitle>{set.name}</DialogTitle>
             <DialogDescription>
               Localización evaluada el {format(new Date(set.createdAt), "d 'de' MMMM 'de' yyyy", { locale: es })}
             </DialogDescription>

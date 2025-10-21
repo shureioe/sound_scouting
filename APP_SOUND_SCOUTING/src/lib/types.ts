@@ -34,10 +34,9 @@ export interface LocationSet {
   tags: string[];
   noiseObservations: string;
   technicalRequirements: string;
-  photos: LocationPhoto[];
-  coordinates?: Coordinates;
-  createdAt: string;
-  updatedAt: string;
+  evaluation?: EvaluationStatus;
+  coordinates?: Coordinates | null;
+  legacyPhotos?: LocationPhoto[];
 }
 
 export type NewLocationSetInput = Omit<LocationSet, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;

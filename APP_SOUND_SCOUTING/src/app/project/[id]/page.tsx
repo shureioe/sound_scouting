@@ -37,7 +37,6 @@ export default function ProjectPage() {
       router.replace('/');
       return;
     }
-=======
   const loadProject = useCallback(() => {
     setLoading(true);
     const loadedProject = getProjectById(projectId);
@@ -155,7 +154,6 @@ export default function ProjectPage() {
   }
 
   if (isLoading || !project) {
-=======
   if (loading) {
     main
     return (
@@ -317,7 +315,6 @@ export default function ProjectPage() {
         )}
  codex/update-on-application-development-status-uzwjav
       </section>
-=======
       </div>
 
       {/* Create Set Dialog */}
