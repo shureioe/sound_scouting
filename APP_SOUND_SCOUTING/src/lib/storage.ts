@@ -1,11 +1,4 @@
-import {
-  LocalStorageData,
-  Project,
-  TechnicianConfig,
-  LocationSet,
-  NewLocationSetInput,
-  LocationStatus,
-} from './types';
+import { LocalStorageData, Project, TechnicianConfig, LocationSet, NewLocationSetInput } from './types';
 
 const STORAGE_KEY = 'soundScoutingData';
 
@@ -323,7 +316,7 @@ export const saveStoredData = (data: LocalStorageData): void => {
   }
 
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
     console.error('Storage: Error writing to localStorage:', error);
   }
@@ -448,11 +441,7 @@ export const createSet = (projectId: string, setData: NewLocationSetInput): Loca
   return newSet;
 };
 
-export const updateSet = (
-  projectId: string,
-  setId: string,
-  updates: Partial<LocationSet>,
-): LocationSet | null => {
+export const updateSet = (projectId: string, setId: string, updates: Partial<LocationSet>): LocationSet | null => {
   const data = getStoredData();
   const projectIndex = data.projects.findIndex(p => p.id === projectId);
 
@@ -465,20 +454,17 @@ export const updateSet = (
     return null;
   }
 
-  const now = new Date().toISOString();
-  const currentSet = data.projects[projectIndex].sets[setIndex];
-  const updatedSet = normalizeLocationSet({
-    ...currentSet,
+  data.projects[projectIndex].sets[setIndex] = {
+    ...data.projects[projectIndex].sets[setIndex],
     ...updates,
     id: currentSet.id,
     createdAt: currentSet.createdAt,
     updatedAt: now,
   });
 
-  data.projects[projectIndex].sets[setIndex] = updatedSet;
-  data.projects[projectIndex].updatedAt = now;
+  data.projects[projectIndex].updatedAt = new Date().toISOString();
   saveStoredData(data);
-  return updatedSet;
+  return data.projects[projectIndex].sets[setIndex];
 };
 
 export const deleteSet = (projectId: string, setId: string): boolean => {

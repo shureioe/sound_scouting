@@ -17,7 +17,7 @@ interface CreateSetDialogProps {
 
 export default function CreateSetDialog({ open, onOpenChange, onSubmit }: CreateSetDialogProps) {
   const [title, setTitle] = useState('');
-  const [evaluation, setEvaluation] = useState<EvaluationStatus>('pendiente');
+  const [evaluation, setEvaluation] = useState<EvaluationStatus>('sin_evaluar');
   const [tags, setTags] = useState('');
   const [noiseObservations, setNoiseObservations] = useState('');
   const [technicalRequirements, setTechnicalRequirements] = useState('');
@@ -29,11 +29,8 @@ export default function CreateSetDialog({ open, onOpenChange, onSubmit }: Create
     setIsCreating(true);
     try {
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      const trimmedTitle = title.trim();
       const wasCreated = await onSubmit({
-        name: trimmedTitle,
-        title: trimmedTitle,
-        status: evaluation,
+        title: title.trim(),
         evaluation,
         tags: tagsArray,
         notes: noiseObservations,
@@ -47,7 +44,7 @@ export default function CreateSetDialog({ open, onOpenChange, onSubmit }: Create
 
       // Reset form
       setTitle('');
-      setEvaluation('pendiente');
+      setEvaluation('sin_evaluar');
       setTags('');
       setNoiseObservations('');
       setTechnicalRequirements('');
