@@ -1,40 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Separator } from '@/components/ui/Separator';
-import { createSet, deleteSet, getProjectById } from '@/lib/storage';
-import type { LocationSet, NewLocationSetInput, Project } from '@/lib/types';
-
-const emptySetDefaults: Omit<NewLocationSetInput, 'title'> = {
-  evaluation: 'sin_evaluar',
-  tags: [],
-  noiseObservations: '',
-  technicalRequirements: '',
-  photos: [],
-};
-
-const feedbackToneMap = {
-  success: 'success',
-  info: 'neutral',
-  error: 'danger',
-} as const;
-
-type FeedbackState =
-  | { type: 'success'; message: string }
-  | { type: 'info'; message: string }
-  | { type: 'error'; message: string }
-  | null;
+import { Project, LocationSet, NewLocationSetInput } from '@/lib/types';
+import { getProjectById, setCurrentProject, updateSet, deleteSet, createSet } from '@/lib/storage';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Plus, MapPin, Calendar, Settings, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import SetCard from '@/components/SetCard';
+import CreateSetDialog from '@/components/CreateSetDialog';
 
 export default function ProjectPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
+ codex/update-on-application-development-status-uzwjav
   const projectId = params?.id;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -54,10 +37,113 @@ export default function ProjectPage() {
       router.replace('/');
       return;
     }
+=======
+  const loadProject = useCallback(() => {
+    setLoading(true);
+    const loadedProject = getProjectById(projectId);
+
+    if (loadedProject) {
+      setCurrentProject(projectId);
+      setProject(loadedProject);
+    } else {
+      // Redirigir a la página principal si el proyecto no existe
+      router.push('/');
+    }
+    setLoading(false);
+  }, [projectId, router]);
+
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
+
+  const handleSetCreated = (setData: NewLocationSetInput): boolean => {
+    if (!project) {
+      return false;
+    }
+
+    const savedSet = createSet(project.id, setData);
+
+    if (!savedSet) {
+      return false;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const hasSet = current.sets.some((existingSet) => existingSet.id === savedSet.id);
+      const updatedSets = hasSet
+        ? current.sets.map((existingSet) =>
+            existingSet.id === savedSet.id ? savedSet : existingSet
+          )
+        : [...current.sets, savedSet];
+
+      return {
+        ...current,
+        sets: updatedSets,
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    return true;
+  };
+
+  const handleSetUpdated = (updatedSet: LocationSet) => {
+    if (!project) {
+      return;
+    }
+
+    const savedSet = updateSet(project.id, updatedSet.id, updatedSet);
+
+    if (!savedSet) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.map(set =>
+          set.id === savedSet.id ? savedSet : set
+        ),
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+
+  const handleSetDeleted = (setId: string) => {
+    if (!project) {
+      return;
+    }
+
+    const deleted = deleteSet(project.id, setId);
+
+    if (!deleted) {
+      return;
+    }
+
+    setProject((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sets: current.sets.filter(set => set.id !== setId),
+        updatedAt: new Date().toISOString()
+      };
+    });
+  };
+ main
 
     setProject(storedProject);
   }, [projectId, router]);
 
+ codex/update-on-application-development-status-uzwjav
   useEffect(() => {
     setIsLoading(true);
     refreshProject();
@@ -69,6 +155,9 @@ export default function ProjectPage() {
   }
 
   if (isLoading || !project) {
+=======
+  if (loading) {
+    main
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-xl px-md py-lg">
         <Card>
@@ -226,7 +315,18 @@ export default function ProjectPage() {
             ))}
           </div>
         )}
+ codex/update-on-application-development-status-uzwjav
       </section>
+=======
+      </div>
+
+      {/* Create Set Dialog */}
+      <CreateSetDialog
+        open={showCreateSetDialog}
+        onOpenChange={setShowCreateSetDialog}
+        onSubmit={handleSetCreated}
+      />
+ main
     </div>
   );
 }
