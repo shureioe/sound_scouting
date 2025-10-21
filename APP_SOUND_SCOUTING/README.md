@@ -98,7 +98,7 @@ La aplicación está configurada como PWA:
 
 - **Manifest**: `public/manifest.json`
 - **Service Worker**: `public/sw.js`
-- **Iconos**: Incluye múltiples tamaños para diferentes dispositivos
+- **Iconos**: Se proveen versiones SVG (`icon-192x192.svg`, `icon-512x512.svg`, `apple-touch-icon.svg`). Si necesitas iconos PNG para compatibilidad total, genera las versiones rasterizadas correspondientes, cópialas a `public/` y descomenta las etiquetas `<link>` en `src/app/layout.tsx`.
 
 ### Base de Datos
 

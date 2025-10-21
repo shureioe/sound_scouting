@@ -24,11 +24,13 @@ export interface Coordinates {
   timestamp: string;
 }
 
+export type EvaluationStatus = 'apto' | 'no_apto' | 'sin_evaluar';
+
 export interface LocationSet {
   id: string;
   projectId: string;
   title: string;
-  evaluation: 'apto' | 'no_apto' | 'sin_evaluar';
+  evaluation: EvaluationStatus;
   tags: string[];
   noiseObservations: string;
   technicalRequirements: string;
@@ -37,6 +39,8 @@ export interface LocationSet {
   createdAt: string;
   updatedAt: string;
 }
+
+export type NewLocationSetInput = Omit<LocationSet, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;
 
 export interface Project {
   id: string;
@@ -60,14 +64,6 @@ export interface ProjectFormData {
   name: string;
 }
 
-export interface SetFormData {
-  title: string;
-  evaluation: 'apto' | 'no_apto' | 'sin_evaluar';
-  tags: string;
-  noiseObservations: string;
-  technicalRequirements: string;
-}
-
 export interface TechnicianFormData {
   fullName: string;
   company: string;
@@ -88,8 +84,6 @@ export interface MapLink {
   label: string;
   icon: string;
 }
-
-export type EvaluationStatus = 'apto' | 'no_apto' | 'sin_evaluar';
 
 export interface FileUploadResult {
   success: boolean;
