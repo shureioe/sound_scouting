@@ -1,288 +1,241 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Project, LocationSet } from '@/lib/types';
-import { getProjectById, getCurrentProject, setCurrentProject, updateSet, deleteSet, createSet } from '@/lib/storage';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Plus, MapPin, Calendar, Settings, FileText, Camera } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import SetCard from '@/components/SetCard';
-import CreateSetDialog from '@/components/CreateSetDialog';
+
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Separator } from '@/components/ui/Separator';
+import { getEvaluationLabel } from '@/lib/evaluation';
+import { createSet, deleteSet, getProjectById } from '@/lib/storage';
+import type { LocationSet, NewLocationSetInput, Project } from '@/lib/types';
+
+const emptySetDefaults: Omit<NewLocationSetInput, 'name' | 'title'> = {
+  status: 'pendiente',
+  notes: '',
+  tags: [],
+  noiseObservations: '',
+  technicalRequirements: '',
+  photos: [],
+};
+
+const feedbackToneMap = {
+  success: 'success',
+  info: 'neutral',
+  error: 'danger',
+} as const;
+
+type FeedbackState =
+  | { type: 'success'; message: string }
+  | { type: 'info'; message: string }
+  | { type: 'error'; message: string }
+  | null;
 
 export default function ProjectPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const projectId = params.id as string;
-  
+
+  const projectId = params?.id;
+
   const [project, setProject] = useState<Project | null>(null);
-  const [showCreateSetDialog, setShowCreateSetDialog] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [locationName, setLocationName] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+
+  const refreshProject = useCallback(() => {
+    if (!projectId) {
+      return;
+    }
+
+    const storedProject = getProjectById(projectId);
+
+    if (!storedProject) {
+      router.replace('/');
+      return;
+    }
+
+    setProject(storedProject);
+  }, [projectId, router]);
 
   useEffect(() => {
-    loadProject();
-  }, [projectId]);
+    setIsLoading(true);
+    refreshProject();
+    setIsLoading(false);
+  }, [refreshProject]);
 
-  const loadProject = () => {
-    setLoading(true);
-    const loadedProject = getProjectById(projectId);
-    
-    if (loadedProject) {
-      setCurrentProject(projectId);
-      setProject(loadedProject);
-    } else {
-      // Redirigir a la página principal si el proyecto no existe
-      router.push('/');
-    }
-    setLoading(false);
-  };
+  if (!projectId) {
+    return null;
+  }
 
-  const handleSetCreated = (newSet: LocationSet) => {
-    console.log('handleSetCreated called with:', newSet);
-    if (project) {
-      // Create the set in localStorage first
-      const savedSet = createSet(project.id, newSet);
-      console.log('Set created in localStorage:', savedSet);
-      
-      if (savedSet) {
-        // Update the local state
-        const updatedProject = {
-          ...project,
-          sets: [...project.sets, savedSet],
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('Project state updated after creation:', updatedProject);
-      }
-    }
-  };
-
-  const handleSetUpdated = (updatedSet: LocationSet) => {
-    console.log('ProjectPage: handleSetUpdated called with:', updatedSet);
-    if (project) {
-      // Update the set in localStorage first - note the parameter order: projectId, setId, updates
-      const savedSet = updateSet(project.id, updatedSet.id, updatedSet);
-      console.log('ProjectPage: Set saved to localStorage:', savedSet);
-      
-      if (savedSet) {
-        // Update the local state
-        const updatedSets = project.sets.map(set => 
-          set.id === updatedSet.id ? savedSet : set
-        );
-        const updatedProject = {
-          ...project,
-          sets: updatedSets,
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('ProjectPage: Project state updated:', updatedProject);
-      } else {
-        console.error('ProjectPage: Failed to save set to localStorage');
-      }
-    } else {
-      console.error('ProjectPage: No project found');
-    }
-  };
-
-  const handleSetDeleted = (setId: string) => {
-    if (project) {
-      // Delete the set from localStorage first
-      const deleted = deleteSet(project.id, setId);
-      console.log('Set deleted from localStorage:', deleted);
-      
-      if (deleted) {
-        // Update the local state
-        const updatedSets = project.sets.filter(set => set.id !== setId);
-        const updatedProject = {
-          ...project,
-          sets: updatedSets,
-          updatedAt: new Date().toISOString()
-        };
-        setProject(updatedProject);
-        console.log('Project state updated after deletion:', updatedProject);
-      }
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "d 'de' MMMM 'de' yyyy", { locale: es });
-  };
-
-  // Debug function to check localStorage
-  const debugLocalStorage = () => {
-    const storedData = localStorage.getItem('soundScoutingData');
-    console.log('=== DEBUG: localStorage Content ===');
-    console.log('Raw data:', storedData);
-    if (storedData) {
-      try {
-        const parsed = JSON.parse(storedData);
-        console.log('Parsed data:', parsed);
-        if (project) {
-          const currentProject = parsed.projects.find((p: any) => p.id === project.id);
-          console.log('Current project in localStorage:', currentProject);
-          if (currentProject) {
-            console.log('Sets in project:', currentProject.sets);
-            currentProject.sets.forEach((set: any, index: number) => {
-              console.log(`Set ${index}:`, set);
-              console.log(`Set ${index} photos:`, set.photos);
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing localStorage data:', e);
-      }
-    } else {
-      console.log('No data found in localStorage');
-    }
-    console.log('=== END DEBUG ===');
-  };
-
-  const getEvaluationColor = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'bg-green-500';
-      case 'no_apto':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getEvaluationLabel = (evaluation: string) => {
-    switch (evaluation) {
-      case 'apto':
-        return 'Apto';
-      case 'no_apto':
-        return 'No apto';
-      default:
-        return 'Sin evaluar';
-    }
-  };
-
-  if (loading) {
+  if (isLoading || !project) {
     return (
-      <div className="container mx-auto p-4 max-w-6xl">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-xl px-md py-lg">
+        <Card>
+          <div className="flex h-32 items-center justify-center text-sm text-foreground/60">
+            Cargando proyecto…
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
 
-  if (!project) {
-    return null;
-  }
+  const handleCreateLocation = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!locationName.trim()) {
+      setFormError('El nombre es obligatorio.');
+      return;
+    }
+
+    const trimmedName = locationName.trim();
+    const payload: NewLocationSetInput = {
+      ...emptySetDefaults,
+      name: trimmedName,
+      title: trimmedName,
+    } as const;
+
+    const savedSet = createSet(project.id, payload);
+
+    if (!savedSet) {
+      setFeedback({ type: 'error', message: 'No se pudo crear la localización.' });
+      return;
+    }
+
+    setLocationName('');
+    setFormError(null);
+    setFeedback({ type: 'success', message: `Se creó "${savedSet.name}".` });
+    refreshProject();
+  };
+
+  const handleDeleteSet = (setToRemove: LocationSet) => {
+    const removed = deleteSet(project.id, setToRemove.id);
+
+    if (!removed) {
+      setFeedback({ type: 'error', message: 'No se pudo borrar la localización.' });
+      return;
+    }
+
+    setFeedback({ type: 'info', message: `Se borró "${setToRemove.name}".` });
+    refreshProject();
+  };
+
+  const totalLocations = project.sets.length;
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl space-y-6 container-mobile safe-area-top safe-area-bottom">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver a proyectos
-            </Button>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-xl px-md py-lg">
+      <header className="flex flex-col gap-sm">
+        <Button
+          variant="subtle"
+          type="button"
+          className="w-fit px-sm py-1 text-sm"
+          onClick={() => router.push('/')}
+        >
+          ← Volver a proyectos
+        </Button>
+
+        <div className="flex flex-col gap-2xs sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-foreground">{project.name}</h1>
+            <p className="text-sm text-foreground/70">
+              Gestiona y organiza las localizaciones evaluadas para este proyecto.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={debugLocalStorage}
-              className="bg-yellow-100 border-yellow-300 text-yellow-800 hover:bg-yellow-200"
-            >
-              🐛 Debug
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Datos del técnico
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/report/${project.id}`)}>
-              <FileText className="mr-2 h-4 w-4" />
-              Generar Informe
-            </Button>
-          </div>
+          <Badge tone="neutral" className="w-fit">
+            {totalLocations === 1
+              ? '1 localización'
+              : `${totalLocations} localizaciones`}
+          </Badge>
         </div>
-        
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              Creado: {formatDate(project.createdAt)}
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {project.sets.length} localizaciones
-            </div>
-          </div>
-        </div>
-      </div>
+      </header>
 
       <Separator />
 
-      {/* Sets Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold">Localizaciones</h2>
-            <p className="text-muted-foreground">
-              Gestiona las localizaciones evaluadas para este proyecto
-            </p>
+      <Card title="Crear nueva localización" description="Completa el nombre y guárdalo para comenzar.">
+        <form
+          onSubmit={handleCreateLocation}
+          className="flex flex-col gap-sm md:flex-row md:items-end"
+        >
+          <div className="flex-1">
+            <Input
+              label="Nombre de la localización"
+              placeholder="Interior fábrica principal"
+              value={locationName}
+              onChange={(event) => {
+                if (formError) {
+                  setFormError(null);
+                }
+                setLocationName(event.target.value);
+              }}
+              errorText={formError ?? undefined}
+            />
           </div>
-          <Button onClick={() => setShowCreateSetDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Localización
+          <Button type="submit" className="md:self-center md:px-lg">
+            Añadir localización
           </Button>
-        </div>
+        </form>
+      </Card>
 
-        {project.sets.length === 0 ? (
-          <Card className="text-center p-8">
-            <CardContent className="space-y-4">
-              <MapPin className="mx-auto h-12 w-12 text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-semibold">No hay localizaciones aún</h3>
-                <p className="text-muted-foreground">
-                  Agrega tu primera localización para comenzar el scouting
-                </p>
-              </div>
-              <Button onClick={() => setShowCreateSetDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Localización
-              </Button>
-            </CardContent>
+      {feedback && (
+        <Badge tone={feedbackToneMap[feedback.type]} className="w-fit">
+          {feedback.message}
+        </Badge>
+      )}
+
+      <section className="flex flex-col gap-sm">
+        <h2 className="text-2xl font-semibold text-foreground">Listado de localizaciones</h2>
+        <Separator className="my-0" />
+
+        {isLoading ? (
+          <Card>
+            <div className="flex h-32 items-center justify-center text-sm text-foreground/60">
+              Cargando proyecto…
+            </div>
+          </Card>
+        ) : totalLocations === 0 ? (
+          <Card title="Sin localizaciones registradas">
+            <div className="flex flex-col items-start gap-2 text-sm text-foreground/70">
+              <p>No hay localizaciones.</p>
+              <p>Añade la primera para comenzar el scouting.</p>
+            </div>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {project.sets.map((set) => (
-              <SetCard
-                key={set.id}
-                set={set}
-                onSetUpdate={handleSetUpdated}
-                onSetDelete={handleSetDeleted}
-              />
+          <div className="grid gap-md sm:grid-cols-2">
+            {project.sets.map((setItem, index) => (
+              <Card
+                key={`${setItem.id}-${index}`}
+                title={setItem.name}
+                footer={
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="subtle"
+                      className="text-danger hover:text-danger"
+                      onClick={() => handleDeleteSet(setItem)}
+                    >
+                      Borrar
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="flex flex-col gap-2xs text-sm text-foreground/70">
+                  <p>
+                    Estado:{' '}
+                    <strong className="font-medium text-foreground">
+                      {getEvaluationLabel(setItem.status ?? setItem.evaluation ?? 'pendiente')}
+                    </strong>
+                  </p>
+                  <p className="text-xs text-foreground/60">
+                    Creado el {new Date(setItem.createdAt).toLocaleDateString('es-ES')}
+                  </p>
+                </div>
+              </Card>
             ))}
           </div>
         )}
-      </div>
-
-      {/* Create Set Dialog */}
-      <CreateSetDialog
-        open={showCreateSetDialog}
-        onOpenChange={setShowCreateSetDialog}
-        projectId={projectId}
-        onSetCreated={handleSetCreated}
-      />
+      </section>
     </div>
   );
 }
